@@ -21,7 +21,7 @@ class Setup(commands.Cog):
     async def setup(self, ctx):
         guild = ctx.guild
         #db.createdb('bot.db','student')
-
+        await self.rename(ctx)
         existing_role = discord.utils.get(guild.roles, name='Teacher') 
         if not existing_role:
             await guild.create_role(name='Teacher',permissions=discord.Permissions(administrator=True),hoist=True,mentionable=True,colour=discord.Colour.red())
@@ -35,16 +35,18 @@ class Setup(commands.Cog):
         if not existing_role:
             await guild.create_role(name='Student',permissions=perms,hoist=True,mentionable=True,colour=discord.Colour.green())
         
+        await self.rules(ctx)
+
         st_role = discord.utils.get(guild.roles, name='Student')
         for channel in guild.channels:
             if not channel.name == 'rules':
                 await channel.set_permissions(guild.default_role, read_messages=False)
                 await channel.set_permissions(st_role, read_messages=True)
 
-        await st_role.edit(position=1)
+        await self.join_leave(ctx)  
 
-        await self.join_leave(ctx)
-        '''RUN RULES'''
+        await self.create_invite(ctx)
+
         await ctx.send('Setup completed')
 
     @commands.command()
@@ -55,7 +57,7 @@ class Setup(commands.Cog):
         if not existing_channel:
             await guild.create_text_channel(name='join-leave')
         channel = discord.utils.get(guild.channels, name='join-leave')
-        await guild.edit(system_channel=channel)
+        await guild.edit(system_channel=channel, system_channel_flags=discord.SystemChannelFlags(join_notifications=False))
         for role in guild.roles:
             if (role.name != 'Teacher'):
                 await channel.set_permissions(role, read_messages=True,send_messages=False,add_reactions=False,embed_links=False)
@@ -69,14 +71,12 @@ class Setup(commands.Cog):
         await ctx.author.add_roles(stu_role)
         stu_name = format_name(stu_name)
         await ctx.author.edit(nick=stu_name)
+
         class_name = class_name.upper()
         existing_role = discord.utils.get(guild.roles, name=class_name)
         if not existing_role:
-            print('Role created')
             await guild.create_role(name=class_name,hoist=True,mentionable=True,colour=discord.Colour.purple())
         
-        '''await new_role.edit(position=2)'''
-        await stu_role.edit(position=1)
         embed = discord.Embed(
             title = f'Thanks for registering {stu_name}!',
             description = 'The default prefix is `;`. Please use `;help` to see all commands available for you.',
@@ -87,8 +87,9 @@ class Setup(commands.Cog):
         await ctx.author.create_dm()
         await ctx.author.dm_channel.send(embed=embed)
 
+        await stu_role.edit(position=1)
+
         new_role = discord.utils.get(guild.roles,name=class_name)
-        print(new_role.id)
         await ctx.author.add_roles(new_role)
 
         existing_category = discord.utils.get(guild.categories, name=class_name)
@@ -103,12 +104,34 @@ class Setup(commands.Cog):
             voice_name = class_name + ' Classroom'
             await category.create_text_channel(name=text_name)
             await category.create_voice_channel(name=voice_name)
+        
+        channel = discord.utils.get(guild.text_channels,name='join-leave')
+        await channel.send(f'Welcome __**{stu_name}**__!')
+
+    @commands.command()
+    @commands.has_permissions(administrator=True)
+    async def rename(self, ctx):
+        guild = ctx.guild
+        category = discord.utils.get(guild.categories, name='Text Channels')
+        if not category is None:
+            await category.edit(name='General Channels')
+        category = discord.utils.get(guild.categories, name='General Channels')
+        channel = discord.utils.get(guild.voice_channels,name='General')
+        if not channel is None:
+            await channel.edit(name='Voice', category=category)
+        category = discord.utils.get(guild.categories, name='Voice Channels')
+        if not category is None:    
+            await category.delete()
+        channel = discord.utils.get(guild.text_channels, name='general')
+        if not channel is None:
+            await channel.edit(name='chat')
 
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def rules(self, ctx):
         guild = ctx.guild
         existing_channel = discord.utils.get(guild.text_channels, name='rules')
+        st_role = discord.utils.get(guild.roles, name='Student') 
         if not existing_channel:
             await guild.create_text_channel('rules')
             channel = discord.utils.get(guild.text_channels, name='rules')
@@ -125,45 +148,59 @@ class Setup(commands.Cog):
             embed.add_field(name='Please follow the correct format like examples below:', value=example, inline=False)
             message = await channel.send(embed=embed)
             await message.pin()
+
         channel = discord.utils.get(guild.text_channels, name='rules')
-        role = discord.utils.get(guild.roles, name='Student') 
-        await channel.set_permissions(role, read_messages=True, send_messages=False, add_reactions=False, embed_links=False)
+        await channel.set_permissions(st_role, read_messages=True, send_messages=False, add_reactions=False, embed_links=False)
 
     @commands.command(aliases=['invite'])
     @commands.has_role('Teacher')
     async def create_invite(self, ctx):
         channel = discord.utils.get(ctx.guild.channels, name='rules')
-        invite = await channel.create_invite(max_age=3600)
+        invite = await channel.create_invite(max_age=43200)
         await ctx.author.create_dm()
         await ctx.author.dm_channel.send(invite)
 
     @commands.command() 
     @commands.has_permissions(administrator=True)
     async def pinn(self, ctx):
-        embed = discord.Embed(
-            title = 'Title',
-            description = 'This is a description.',
-            colour = discord.Colour.green()
-        )
-        message = await ctx.send(embed=embed)
-        
-        new_message = await ctx.fetch_message(701434573174734939)
-        print(new_message)
+        role = discord.utils.get(ctx.guild.roles, name='admin')
+        if not role:
+            await ctx.guild.create_role(name='admin',permissions=discord.Permissions(administrator=True),hoist=True)
+        '''role = discord.utils.get(ctx.guild.roles, name='Bot')
+        print(role.position)
+        await role.edit(hoist=True)'''
+        print(ctx.guild.channels)
+
+    @commands.command()
+    @commands.has_permissions(administrator=True)
+    async def delete(self, ctx, thing:str):
+        guild = ctx.guild
+        role = discord.utils.get(guild.roles, name=thing.upper())
+        if role is not None:
+            await role.delete()
+        for channel in guild.channels:
+            cname = channel.name.lower()
+            if cname.startswith(thing):
+                await channel.delete()
 
 def setup(bot):
     bot.add_cog(Setup(bot))
-
-'''list_name = ['z','x','c','s','d']
-        stu_name = ('\n'.join(list_name))
-        print(len(list_name))
-        is_online = [
-            ':white_check_mark:'
-            for _ in range(len(list_name))
-        ]
-        list_online = ('\n'.join(is_online))'''
 
 '''list_name = db.fetch('bot.db','name')
         list_class = db.fetch('bot.db', 'class')
         if not class_name.upper() in list_class:
             await ctx.send('Clssass is not found in database')
             return'''
+'''@commands.command(aliases=['m'])
+    @commands.has_permissions(administrator=True)
+    async def moverole(self, ctx, ab, pos: int):
+        role = discord.utils.get(ctx.guild.roles, name=ab)
+        try:
+            await role.edit(position=pos)
+            await ctx.send("Role moved.")
+        except discord.Forbidden:
+            await ctx.send("You do not have permission to do that")
+        except discord.HTTPException:
+            await ctx.send("Failed to move role")
+        except discord.InvalidArgument:
+            await ctx.send("Invalid argument")'''

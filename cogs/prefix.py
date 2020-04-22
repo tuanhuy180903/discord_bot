@@ -8,7 +8,7 @@ class Prefix(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-        key = '#'.join([member.name, member.discriminator])
+        key = str(member.id)
         with open('./cogs/prefixes.json', 'r') as f:
             prefixes = json.load(f)
 
@@ -18,7 +18,7 @@ class Prefix(commands.Cog):
         
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        key = '#'.join([member.name, member.discriminator])
+        key = str(member.id)
         with open('./cogs/prefixes.json', 'r') as f:
             prefixes = json.load(f)
 
@@ -28,7 +28,7 @@ class Prefix(commands.Cog):
 
     @commands.command(aliases=['prefix'], help= 'Change prefix', description = 'Change bot''s current prefix to a new one')
     async def change_prefix(self, ctx, new_prefix):
-        key = '#'.join([ctx.author.name, ctx.author.discriminator])
+        key = str(ctx.author.id)
         with open('./cogs/prefixes.json', 'r') as f:
             prefixes = json.load(f)
 

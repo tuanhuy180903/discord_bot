@@ -116,15 +116,16 @@ class Event(commands.Cog):
 
         embed.set_footer(text='Copyright © 2020 EEIT2017')
         embed.set_thumbnail(url='https://vgu.edu.vn/cms-vgu-theme-4/images/cms/vgu_logo.png')
-        embed.add_field(name='You must register for accessing the server', value='Please follow the instruction in `#rules` channel in the server.', inline=False)
+        embed.add_field(name='You must register for accessing the server', value='Please follow the instruction in `**#rules**` channel in the server.', inline=False)
 
         await member.create_dm()
         await member.dm_channel.send(embed=embed) 
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        channel = discord.utils.get(member.guild.channels, name='join-leave')
-        await channel.send(f'__**{member.nick}**__ has left the server.')
+        if member.nick is not None:
+            channel = discord.utils.get(member.guild.channels, name='join-leave')
+            await channel.send(f'__**{member.nick}**__ has left the server.')
 
 def setup(bot):
     bot.add_cog(Event(bot))
