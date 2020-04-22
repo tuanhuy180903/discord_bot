@@ -12,7 +12,7 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 #bot.remove_command('help')
 
 def get_prefix(bot, message):
-    key = '#'.join([message.author.name, message.author.discriminator])
+    key = str(message.author.id)
     with open('./cogs/prefixes.json', 'r') as f:
         prefixes = json.load(f)
 
@@ -111,11 +111,34 @@ async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CheckFailure):
         await ctx.send(f'You do not have the correct role for this command')
 
+@bot.command(name='kick', help='Kick member.')
+@commands.has_permissions(administrator=True)
+async def kick(ctx, member : discord.Member, *, reason=None):
+    await member.kick(reason=reason)
+
+@bot.command(name='ban', help='Ban member.')
+@commands.has_permissions(administrator=True)
+async def ban(ctx, member : discord.Member, *, reason='Annoying'):
+    await member.ban(reason=reason)
+
+@bot.command(name='unban', help='Unban member.')
+@commands.has_permissions(administrator=True)
+async def unban(ctx, *, member):
+    banned_users = await ctx.guild.bans()
+    member_name, member_discriminator = member.split('#')
+
+    for ban_entry in banned_users:
+        user = ban_entry.user
+        if (user.name, user.discriminator) == (member_name, member_discriminator):
+            await ctx.guild.unban(user)
+            return
+            
+bot.run(TOKEN)
 '''@bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
         await ctx.send('You are missing permissions for this command')'''
-bot.run(TOKEN)
+
 
 '''@bot.command()
 async def help(ctx):
@@ -126,3 +149,4 @@ async def help(ctx):
     embed.add_field(name='ping',value='Show ping.', inline=True)
 
     await ctx.author.send(embed=embed)'''
+'''key = '#'.join([message.author.name, message.author.discriminator])'''
