@@ -55,7 +55,7 @@ class Setup(commands.Cog):
         guild = ctx.guild
         existing_channel = channel = discord.utils.get(guild.channels, name='join-leave')
         if not existing_channel:
-            await guild.create_text_channel(name='join-leave')
+            await guild.create_text_channel(name='join-leave', topic='notification channel for student joining/leaving this server')
         channel = discord.utils.get(guild.channels, name='join-leave')
         await guild.edit(system_channel=channel, system_channel_flags=discord.SystemChannelFlags(join_notifications=False))
         for role in guild.roles:
@@ -102,11 +102,11 @@ class Setup(commands.Cog):
                     await category.set_permissions(role, read_messages=False, speak=False)
             text_name = class_name.lower() + '-chat'
             voice_name = class_name + ' Classroom'
-            await category.create_text_channel(name=text_name)
+            await category.create_text_channel(name=text_name, topic=f'text chat channel only for class {class_name}')
             await category.create_voice_channel(name=voice_name)
         
         channel = discord.utils.get(guild.text_channels,name='join-leave')
-        await channel.send(f'Welcome __**{stu_name}**__!')
+        await channel.send(f'Welcome **{stu_name}**!')
 
     @commands.command(brief='Included in setup, you can ignore this.')
     @commands.has_permissions(administrator=True)
@@ -124,7 +124,7 @@ class Setup(commands.Cog):
             await category.delete()
         channel = discord.utils.get(guild.text_channels, name='general')
         if not channel is None:
-            await channel.edit(name='chat')
+            await channel.edit(name='chat', topic='text chat channel for students of all classes')
 
     @commands.command(brief='Included in setup, you can ignore this.')
     @commands.has_permissions(administrator=True)
@@ -164,27 +164,6 @@ class Setup(commands.Cog):
     @commands.command(description='Only for the developer!') 
     @commands.is_owner()
     async def pinn(self, ctx):
-        '''mess = await ctx.channel.fetch_message(703072033864679466)
-        print(mess.reactions)
-        embed = discord.Embed(
-            title = f'Hello! I am ',
-            colour = discord.Colour.green()
-        )
-        dash = '\n\U00002500\U00002500\U00002500\U00002500\U00002500\U00002500\U00002500\U00002500\U00002500\n'
-        board = ':one: \U00002502 :two: \U00002502 :three:' + dash + ':four: \U00002502 :five: \U00002502 :six:' + dash + ':seven: \U00002502 :eight: \U00002502 :nine:'
-        embed.set_footer(text='Copyright © 2020 EEIT2017')
-        embed.set_thumbnail(url='https://vgu.edu.vn/cms-vgu-theme-4/images/cms/vgu_logo.png')
-        embed.add_field(name='Please type', value=board, inline=True)
-        embed1 = embed.copy()
-        message = await ctx.send(embed=embed)
-        embed1.colour = discord.Colour.dark_red()
-        await message.edit(embed=embed1)
-        ss = embed1.fields[0].value
-        ss = ss.replace('\U00002502','')
-        ss = ss.replace('\U00002500','')
-        ss = ss.replace(' ','')
-        ss = ss.replace('\n','')
-        print(ss)'''
         a = 2
         b = 2
         c = 2
@@ -231,3 +210,22 @@ def setup(bot):
             await ctx.send("Failed to move role")
         except discord.InvalidArgument:
             await ctx.send("Invalid argument")'''
+'''embed = discord.Embed(
+            title = f'Hello! I am ',
+            colour = discord.Colour.green()
+        )
+        dash = '\n\U00002500\U00002500\U00002500\U00002500\U00002500\U00002500\U00002500\U00002500\U00002500\n'
+        board = ':one: \U00002502 :two: \U00002502 :three:' + dash + ':four: \U00002502 :five: \U00002502 :six:' + dash + ':seven: \U00002502 :eight: \U00002502 :nine:'
+        embed.set_footer(text='Copyright © 2020 EEIT2017')
+        embed.set_thumbnail(url='https://vgu.edu.vn/cms-vgu-theme-4/images/cms/vgu_logo.png')
+        embed.add_field(name='Please type', value=board, inline=True)
+        embed1 = embed.copy()
+        message = await ctx.send(embed=embed)
+        embed1.colour = discord.Colour.dark_red()
+        await message.edit(embed=embed1)
+        ss = embed1.fields[0].value
+        ss = ss.replace('\U00002502','')
+        ss = ss.replace('\U00002500','')
+        ss = ss.replace(' ','')
+        ss = ss.replace('\n','')
+        print(ss)'''
