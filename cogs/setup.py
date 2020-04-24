@@ -102,7 +102,7 @@ class Setup(commands.Cog):
                     await category.set_permissions(role, read_messages=False, speak=False)
             text_name = class_name.lower() + '-chat'
             voice_name = class_name + ' Classroom'
-            await category.create_text_channel(name=text_name, topic=f'text chat channel only for class {class_name}')
+            await category.create_text_channel(name=text_name, topic=f'text chat channel only for students in class {class_name}')
             await category.create_voice_channel(name=voice_name)
         
         channel = discord.utils.get(guild.text_channels,name='join-leave')

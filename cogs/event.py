@@ -1,6 +1,6 @@
 import discord
 import json
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 def is_roled(ctx):
     return len(ctx.author.roles)>1
@@ -268,6 +268,10 @@ class Event(commands.Cog):
                 embed = message.embeds
                 await uzer.dm_channel.send(f'> **{embed[0].description}**\nUnfortunately, you chose {reaction.emoji} - the **wrong** answer for the question!')
 
+    @tasks.loop(seconds=10)
+    async def reset_accept(self):
+        
+
     @commands.command(aliases=['ttt'],help='Play tic-tac-toe with someone.',usage = '<username_to_play>')
     @commands.check(is_roled)
     async def tictactoe(self, ctx, player:discord.Member):
@@ -280,6 +284,12 @@ class Event(commands.Cog):
         for i in self.opponent:
             if self.opponent[i] == ctx.author.id:
                 return await ctx.send('You are playing in another board!')
+            if self.opponent[i] == player.id:
+                return await ctx.send(f'{player.name} is playing in another board!')
+        if player.id in self.opponent:
+            return await ctx.send(f'{player.name} is playing in another board!')
+        if ctx.author.id in self.opponent:
+            return await ctx.send('You are playing in another board!')
         if not ctx.author.nick:
             name2 = ctx.author.name
         else:
@@ -316,7 +326,7 @@ class Event(commands.Cog):
     async def on_member_remove(self, member):
         if member.nick is not None:
             channel = discord.utils.get(member.guild.channels, name='join-leave')
-            await channel.send(f'__**{member.nick}**__ has left the server.')
+            await channel.send(f'**{member.nick}** has left the server.')
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role):
