@@ -268,10 +268,6 @@ class Event(commands.Cog):
                 embed = message.embeds
                 await uzer.dm_channel.send(f'> **{embed[0].description}**\nUnfortunately, you chose {reaction.emoji} - the **wrong** answer for the question!')
 
-    @tasks.loop(seconds=10)
-    async def reset_accept(self):
-        
-
     @commands.command(aliases=['ttt'],help='Play tic-tac-toe with someone.',usage = '<username_to_play>')
     @commands.check(is_roled)
     async def tictactoe(self, ctx, player:discord.Member):
