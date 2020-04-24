@@ -41,7 +41,7 @@ bot = commands.Bot(command_prefix=get_prefix)
 
 @bot.event
 async def on_ready():
-    await bot.change_presence(status=discord.Status.idle, activity=discord.Activity(name="this server", type=discord.ActivityType.watching))
+    await bot.change_presence(status=discord.Status.idle, activity=discord.Activity(name="this server | Stay Home - Stay Safe", type=discord.ActivityType.watching))
     channel = discord.utils.get(bot.get_all_channels(), name = 'chat')
     await channel.send('Hey I\'m online!')
 
