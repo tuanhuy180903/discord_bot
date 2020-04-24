@@ -1,5 +1,6 @@
 import discord
 import json
+import random
 from discord.ext import commands
 
 online = [discord.Status.online, discord.Status.idle, discord.Status.dnd]
@@ -25,10 +26,15 @@ async def in_chat(ctx):
     else:
         return True
 
+def have_prefix(id):
+    with open('./cogs/prefixes.json', 'r') as f:
+        prefix = json.load(f)
+    return prefix[id]
+
 class Tools(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        #des = 'fdsaf'
+        self.dice_list = {}
     
     @commands.command(aliases=['bw'], brief='Show/add bad words', help='Show a list of bad words banned in this server when {list_of_bad_words} is blank.\nAdd a list of bad words when {list_of_bad_words} is filled.',description='Examples:\n;bw\n;bw abcd, efgh',usage='{list_of_bad_words}')
     @commands.check(is_roled)
@@ -64,8 +70,8 @@ class Tools(commands.Cog):
             else:
                 await ctx.send('You are not allowed to use this command')
 
-    @commands.command(aliases=['cl'], help='Check attendances of a class')
-    @commands.has_role('Student')
+    @commands.command(aliases=['cl'], brief='Check attendances of a class', description='To check out a list of signed-up students of a class, you can use this command and for example:\n;cl EEIT2017\n;check_list ba2015')
+    @commands.has_permissions(administrator=True)
     async def check_list(self, ctx, class_name):
         class_name = class_name.upper()
         embed = discord.Embed(
@@ -78,10 +84,10 @@ class Tools(commands.Cog):
         #append a role when new signup
         existing_role = discord.utils.get(ctx.guild.roles,name=class_name)
         if not existing_role:
-            await ctx.send('Unknown class name')
+            await ctx.send('Invalid class name.')
             return
         if not existing_role.members:
-            await ctx.send('There is no student in this class')
+            await ctx.send(f'There is no student in class {class_name}.')
             return
         for member in existing_role.members:
             if not member.nick:
@@ -101,9 +107,16 @@ class Tools(commands.Cog):
         embed.add_field(name='**Online**',value=is_online,inline=True)
         
         await ctx.send(embed=embed)
-
-    @commands.command(aliases=['ms'])
-    @commands.has_role('Teacher')
+    
+    @check_list.error
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.errors.MissingPermissions):
+            await ctx.send('You are missing permissions to use this command!')
+        if isinstance(error, commands.errors.MissingRequiredArgument):
+            await ctx.send(f'You are missing required arguments for this command!\nTo find out the right way to use this command, type: `{ctx.prefix}help` cl')
+            
+    @commands.command(aliases=['ms'], brief='Show a list of students who are absent from classroom.', description='First, you have to connect to a voice channel.\nThen, type ;ms or ;missing to show a list of students who are absent from classroom.')
+    @commands.has_permissions(administrator=True)
     async def missing(self, ctx):
         if not ctx.author.voice:
             return await ctx.send('You haven\'t been in a voice channel yet!')
@@ -129,34 +142,34 @@ class Tools(commands.Cog):
         embed.set_thumbnail(url='https://vgu.edu.vn/cms-vgu-theme-4/images/cms/vgu_logo.png')
         await ctx.send(embed=embed)
 
-    '''@missing.error
+    @missing.error
     async def on_command_error(self, ctx, error):
-        if isinstance(error, commands.errors.MissingRole):
-            return await ctx.send('You do not have specific roles to use this command')
-        if isinstance(error, commands.errors.CheckFailure):
-            return await ctx.send('You haven\'t been in a voice channel yet!')'''
+        if isinstance(error, commands.errors.MissingPermissions):
+            await ctx.send('You are missing permissions to use this command!')
 
-    @commands.command(aliases=['um'])
-    @commands.has_role('Teacher')
-    async def unmute(self, ctx, stu_name):
+    @commands.command(aliases=['um'], brief='Unmute a student', description='When you are teaching in a voice channel and there is a student who wants to speak, let him/her talk by typing a command likes this example:\n;um @Phuoc\nor\n;ummute Phuoc')
+    @commands.has_permissions(administrator=True)
+    async def unmute(self, ctx, student: discord.Member):
         if not ctx.author.voice:
             return await ctx.send('You haven\'t been in a voice channel yet!')
-        if stu_name[0] == '<':
-            stu_name = stu_name[3:len(stu_name)-1]
-            student = ctx.guild.get_member(int(stu_name))
-            if student == ctx.guild.owner:
-                await ctx.send('Can\'t use on yourself.')
-                return
-            stu_name = student.nick
-        else:
-            student = discord.utils.get(ctx.guild.members, nick=stu_name)
+        if student == ctx.author:
+            return await ctx.send('Can\'t use on yourself!')
         if not student.voice:
-            await ctx.send(f'**{stu_name}** hasn\'t been in a voice channel yet.')
-            return
-        await student.edit(mute=False)
-        await ctx.send(f'**{stu_name}** is un-muted.')
+            return await ctx.send(f'**{student.nick}** hasn\'t been in a voice channel yet.')
 
-    @commands.command(aliases=['q'])
+        await student.edit(mute=False)
+        channel = ctx.author.voice.channel
+        await channel.set_permissions(student, speak=True, stream=True)
+        await ctx.send(f'**{student.nick}** is un-muted.')
+
+    @unmute.error
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.errors.MissingPermissions):
+            await ctx.send('You are missing permissions to use this command!')
+        if isinstance(error, commands.errors.MissingRequiredArgument):
+            await ctx.send(f'You are missing required arguments for this command!\nTo find out the right way to use this command, type: `{ctx.prefix}help` um')
+
+    @commands.command(aliases=['q'], brief='Public a multiple-choice question', description='To release a multiple choice question, you can follow this example:\n;q 1+1=2? .right, wrong\nRemember to put a dot "." before the right answer to specify it.', usage='<question>? {list_of_answers}')
     @commands.check(is_roled)
     async def question(self, ctx, *, qa:str):
         await ctx.channel.purge(limit=1)
@@ -174,11 +187,14 @@ class Tools(commands.Cog):
                 ans[i] = ans[i].lstrip('.')
             choice += ':regional_indicator_' + list_choice[i] + '\n'
         if cor_ans == -1:
-            await ctx.send(f'You have not specified the correct answer yet!\n Please use `{ctx.prefix}help question` for format the command exactly!')
+            await ctx.send(f'You have not specified the correct answer yet!\n Please use `{ctx.prefix}help question` to format the command exactly!')
         ans = ('\n'.join(ans))
-
+        if not ctx.author.nick:
+            namee = ctx.author.name
+        else:
+            namee = ctx.author.nick
         embed = discord.Embed(
-            title = f'A question from Teacher {ctx.author.name}:',
+            title = f'A question from Teacher {namee}:',
             description = qs + '?',
             colour = discord.Colour.orange()
         )
@@ -198,15 +214,140 @@ class Tools(commands.Cog):
 
         for i in range(length):
             await message.add_reaction(list_reaction[i])
+    @question.error
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.errors.MissingRequiredArgument):
+            await ctx.send(f'You are missing required arguments for this command!\nTo find out the right way to use this command, type: `{ctx.prefix}help` q')
 
-    @commands.command()
-    @commands.has_role('admin')
-    async def emoji(self, ctx, search_term):
-        bot = ctx.bot
-        if isinstance(search_term, int):
-            return bot.get_emoji(search_term)
-        if isinstance(search_term, str):
-            return discord.utils.get(bot.emojis, name=search_term) 
+    @commands.command(brief='Invite a class to that classroom.',description='After using this command, bot will automatically send invites to students of the class via DM Channel.')
+    @commands.has_permissions(administrator=True)
+    async def invite(self, ctx, class_name):
+        guild = ctx.guild
+        class_name = class_name.upper()
+        role = discord.utils.get(guild.roles,name=class_name)
+        if not role:
+            return await ctx.send('Invalid class name.')
+        if not role.members:
+            return await ctx.send(f'There is no student in class {class_name}.')
+
+        voice_name = class_name + ' Classroom'
+        voice_channel = discord.utils.get(guild.voice_channels,name=voice_name)
+        print(voice_channel)
+        invite_link = await voice_channel.create_invite(max_age=3600)
+        print(invite_link)
+        embed = discord.Embed(
+                title = 'Hello!',
+                description = f'Teacher **{ctx.author.name}** is going to teach in **{voice_name}** in couple minutes.\nPlease follow the link below to connect to the classroom.\n{invite_link}',
+                colour = discord.Colour.gold()
+            )
+        embed.set_footer(text='Copyright © 2020 EEIT2017')
+        embed.set_thumbnail(url='https://vgu.edu.vn/cms-vgu-theme-4/images/cms/vgu_logo.png')
+        for member in role.members:
+            if member.voice is not None:
+                if member.voice.channel == voice_channel:
+                    return
+            embed.title = f'Hello {member.nick}!'
+            await member.create_dm()
+            await member.dm_channel.send(embed=embed)
+        return await ctx.send(f'Invited {class_name}!')
+
+    @invite.error
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.errors.MissingPermissions):
+            await ctx.send('You are missing permissions to use this command!')
+        if isinstance(error, commands.errors.MissingRequiredArgument):
+            await ctx.send(f'You are missing required arguments for this command!\nTo find out the right way to use this command, type: `{ctx.prefix}help` invite')
+
+
+    @commands.command(aliases=['clr'], brief='Clear texts in a chat channel', description='To clear texts in a chat channel, type this:\n;clear 20\nor\n;clr 5\nIf the amout of lines is not specified, bot will automatically delete 10 lines.')
+    @commands.has_permissions(manage_channels=True)
+    async def clear(self, ctx, amount=10):
+        await ctx.channel.purge(limit=amount)
+
+    @clear.error
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.errors.MissingPermissions):
+            await ctx.send('You are missing permissions to use this command!')
+
+    @commands.command(brief='Kick member', description='To kick a member out of a channel, use this command, for example:\n;kick @Phuoc')
+    @commands.has_permissions(administrator=True)
+    async def kick(self, ctx, member: discord.Member, *, reason=None):
+        await member.kick(reason=reason)
+    
+    @kick.error
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.errors.MissingPermissions):
+            await ctx.send('You are missing permissions to use this command!')
+        if isinstance(error, commands.errors.MissingRequiredArgument):
+            await ctx.send(f'You are missing required arguments for this command!\nTo find out the right way to use this command, type: `{ctx.prefix}help` kick')
+
+    @commands.command(brief='Ban member', description='To ban a member, use this command, for example:\n;ban @Phuoc')
+    @commands.has_permissions(administrator=True)
+    async def ban(self, ctx, member: discord.Member, *, reason='Annoying'):
+        await member.ban(reason=reason)
+    
+    @ban.error
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.errors.MissingPermissions):
+            await ctx.send('You are missing permissions to use this command!')
+        if isinstance(error, commands.errors.MissingRequiredArgument):
+            await ctx.send(f'You are missing required arguments for this command!\nTo find out the right way to use this command, type: `{ctx.prefix}help` ban')
+
+    @commands.command(brief='Unban member.',  description='To unban a member. First, you have to know the member\'s name and discriminator. Then use this command, for example:\n;unban Pidv#0671', usage='<user_name>#<user_discriminator>')
+    @commands.has_permissions(administrator=True)
+    async def unban(self, ctx, *, member):
+        banned_users = await ctx.guild.bans()
+        member_name, member_discriminator = member.split('#')
+
+        for ban_entry in banned_users:
+            user = ban_entry.user
+
+            if (user.name, user.discriminator) == (member_name, member_discriminator):
+                await ctx.guild.unban(user)
+                return
+
+    @unban.error
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.errors.MissingPermissions):
+            await ctx.send('You are missing permissions to use this command!')
+        if isinstance(error, commands.errors.MissingRequiredArgument):
+            await ctx.send(f'You are missing required arguments for this command!\nTo find out the right way to use this command, type: `{ctx.prefix}help` unban')
+
+    @commands.command(aliases=['r'], brief='Simulates rolling dice.', description='If [player] is left blank, it will simulate rolling dice. Otherwise, it will challenge someone to roll dice.')
+    @commands.check(is_roled)
+    async def roll(self, ctx, player:discord.Member=None):
+        dice = random.choice(range(1, 7))
+        if player == ctx.author:
+            return await ctx.send('Can\'t use on yourself!')
+        if player == self.bot.user:
+            return await ctx.send('Can\'t use on bot!')
+        if not ctx.author.nick:
+            name = ctx.author.name
+        else:
+            name = ctx.author.nick
+        await ctx.send(f':game_die: **|** **{name}** rolls a 6-sided dice and it\'s a ...**{dice}**!')
+        if player is not None:
+            if ctx.author.id in self.dice_list:
+                if dice > self.dice_list[ctx.author.id]:
+                    await ctx.send('> You are the **winner**!')
+                elif dice < self.dice_list[ctx.author.id]:
+                    await ctx.send('> You are the **loser**!')
+                else:   
+                    await ctx.send('> **Draw**!')
+                self.dice_list.pop(ctx.author.id)
+            self.dice_list[player.id] = dice
+            await ctx.send(f'{player.mention}, **{name}** is challenging you for rolling a dice.\n> Use command **`{have_prefix(str(player.id))}roll`** to join!')
+        else:
+            if ctx.author.id in self.dice_list:
+                if dice > self.dice_list[ctx.author.id]:
+                    await ctx.send('> You are the **winner**!')
+                elif dice < self.dice_list[ctx.author.id]:
+                    await ctx.send('> You are the **loser**!')
+                else:   
+                    await ctx.send('> **Draw**!')
+                self.dice_list.pop(ctx.author.id)
+        print(self.dice_list)
+
 def setup(bot):
     bot.add_cog(Tools(bot))
 
@@ -227,3 +368,33 @@ def setup(bot):
 
         await ctx.send(client.user)
         await client.disconnect()'''
+'''@commands.command(aliases=['dm'],brief='Create a DM to someone.',description='')
+    @commands.check(is_roled)
+    async def createdm(self, ctx, user: discord.Member):
+        if not user.nick:
+            namee1 = user.name
+        else:
+            namee1 = user.nick
+        if not ctx.author.nick:
+            namee2 = ctx.author.name
+        else:
+            namee2 = ctx.author.nick    
+        await user.create_dm()
+        await user.dm_channel.send(f'Hello **{namee1}**!\n**{namee2}** wants to contact you, please respond this message.')
+
+    @createdm.error
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.errors.BadArgument):
+            return await ctx.send('Invalid user!')
+        if isinstance(error, commands.errors.MissingRequiredArgument):
+            return await ctx.send('Please type an user!')'''
+
+'''if stu_name[0] == '<':
+            stu_name = stu_name[3:len(stu_name)-1]
+            student = ctx.guild.get_member(int(stu_name))
+            if student == ctx.author:
+                await ctx.send('Cant use on yourself.')
+                return
+            stu_name = student.nick
+        else:
+            student = discord.utils.get(ctx.guild.members, nick=stu_name)'''
