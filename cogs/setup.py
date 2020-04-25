@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 import database as db
+import random
+import asyncio
 
 def is_everyone(ctx):
         return len(ctx.author.roles)==1
@@ -15,6 +17,7 @@ def format_name(name:str):
 class Setup(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.test = []
 
     @commands.command(help='Set up a teaching server.',description='Only use it once when creating the server.\nAfter that, you can ignore this command.')
     @commands.has_permissions(administrator=True)
@@ -161,16 +164,42 @@ class Setup(commands.Cog):
         await ctx.author.create_dm()
         await ctx.author.dm_channel.send(invite)
 
+    async def change_embed(self, num):
+        await self.bot.wait_until_ready()
+        index = len(self.test)-1
+        while not self.bot.is_closed():
+            await asyncio.sleep(5)
+            print(num)
+            self.test[index].cancel()
+            
+
     @commands.command(description='Only for the developer!') 
     @commands.is_owner()
     async def pinn(self, ctx):
-        a = 2
-        b = 2
-        c = 2
-        if (a==b==c):
-            print('haha')
+        embed = discord.Embed(
+            title = 'Test',
+            description = 'Start',
+            colour = discord.Colour.red()
+        )
+        message = await ctx.send(embed=embed)
+        kk = len(self.test)
+        number = random.choice(range(1,20))
+        self.bg_task = self.bot.loop.create_task(self.change_embed(number))
+        self.test.append(self.bg_task)
 
     @pinn.error
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.errors.CheckFailure):
+            return await ctx.send('Sorry, you found a developer-only command!')
+
+    @commands.command(description='Only for the developer!')
+    @commands.is_owner()
+    async def stop(self, ctx):
+        print(self.test)
+        for task in self.test:
+            task.cancel()
+    
+    @stop.error
     async def on_command_error(self, ctx, error):
         if isinstance(error, commands.errors.CheckFailure):
             return await ctx.send('Sorry, you found a developer-only command!')

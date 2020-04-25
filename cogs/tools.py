@@ -74,6 +74,8 @@ class Tools(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def check_list(self, ctx, class_name):
         class_name = class_name.upper()
+        if class_name == 'BOT':
+            return await ctx.send('Can\'t use on bot!')
         embed = discord.Embed(
             title = f'List of {class_name} students',
             description = f'Use `{ctx.prefix}missing` to show a list of students missing when you are in a classroom.',
@@ -121,8 +123,9 @@ class Tools(commands.Cog):
         if not ctx.author.voice:
             return await ctx.send('You haven\'t been in a voice channel yet!')
         channel_name = ctx.author.voice.channel.name
+        if channel_name == 'Voice':
+            return await ctx.send('Can\'t use in here!')
         class_name = channel_name.strip(' Classroom')
-        '''CHECK GENERAL VOICE CHANNEL'''
         exist_role = discord.utils.get(ctx.guild.roles,name=class_name)
         mention = []
         for member in exist_role.members:
@@ -154,6 +157,8 @@ class Tools(commands.Cog):
             return await ctx.send('You haven\'t been in a voice channel yet!')
         if student == ctx.author:
             return await ctx.send('Can\'t use on yourself!')
+        if student == self.bot.user:
+            return await ctx.send('Can\'t use on bot!')
         if not student.voice:
             return await ctx.send(f'**{student.nick}** hasn\'t been in a voice channel yet.')
 
@@ -224,6 +229,8 @@ class Tools(commands.Cog):
     async def invite(self, ctx, class_name):
         guild = ctx.guild
         class_name = class_name.upper()
+        if class_name == 'BOT':
+            return await ctx.send('Can\'t use on bot!')
         role = discord.utils.get(guild.roles,name=class_name)
         if not role:
             return await ctx.send('Invalid class name.')
@@ -269,9 +276,13 @@ class Tools(commands.Cog):
         if isinstance(error, commands.errors.MissingPermissions):
             await ctx.send('You are missing permissions to use this command!')
 
-    @commands.command(brief='Kick member', description='To kick a member out of a channel, use this command, for example:\n;kick @Phuoc')
+    @commands.command(brief='Kick member.', description='To kick a member out of this server, use this command, for example:\n;kick @Phuoc')
     @commands.has_permissions(administrator=True)
     async def kick(self, ctx, member: discord.Member, *, reason=None):
+        if member == ctx.author:
+            return await ctx.send('Can\'t use on yourself!')
+        if member == self.bot.user:
+            return await ctx.send('Can\'t use on bot!')
         await member.kick(reason=reason)
     
     @kick.error
@@ -281,9 +292,13 @@ class Tools(commands.Cog):
         if isinstance(error, commands.errors.MissingRequiredArgument):
             await ctx.send(f'You are missing required arguments for this command!\nTo find out the right way to use this command, type: `{ctx.prefix}help` kick')
 
-    @commands.command(brief='Ban member', description='To ban a member, use this command, for example:\n;ban @Phuoc')
+    @commands.command(brief='Ban member.', description='To ban a member from this server, use this command, for example:\n;ban @Phuoc')
     @commands.has_permissions(administrator=True)
     async def ban(self, ctx, member: discord.Member, *, reason='Annoying'):
+        if member == ctx.author:
+            return await ctx.send('Can\'t use on yourself!')
+        if member == self.bot.user:
+            return await ctx.send('Can\'t use on bot!')
         await member.ban(reason=reason)
     
     @ban.error
@@ -313,7 +328,7 @@ class Tools(commands.Cog):
         if isinstance(error, commands.errors.MissingRequiredArgument):
             await ctx.send(f'You are missing required arguments for this command!\nTo find out the right way to use this command, type: `{ctx.prefix}help` unban')
 
-    @commands.command(aliases=['r'], brief='Simulates rolling dice.', description='If [player] is left blank, it will simulate rolling dice. Otherwise, it will challenge someone to roll dice.')
+    @commands.command(aliases=['r'], brief='Simulates rolling dice.', description='If [player] is left blank, it will simulate rolling dice. Otherwise, it will challenge someone to roll a dice.')
     @commands.check(is_roled)
     async def roll(self, ctx, player:discord.Member=None):
         dice = random.choice(range(1, 7))
@@ -381,13 +396,7 @@ def setup(bot):
             namee2 = ctx.author.nick    
         await user.create_dm()
         await user.dm_channel.send(f'Hello **{namee1}**!\n**{namee2}** wants to contact you, please respond this message.')
-
-    @createdm.error
-    async def on_command_error(self, ctx, error):
-        if isinstance(error, commands.errors.BadArgument):
-            return await ctx.send('Invalid user!')
-        if isinstance(error, commands.errors.MissingRequiredArgument):
-            return await ctx.send('Please type an user!')'''
+'''
 
 '''if stu_name[0] == '<':
             stu_name = stu_name[3:len(stu_name)-1]

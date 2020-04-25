@@ -26,7 +26,7 @@ class Prefix(commands.Cog):
         with open('./cogs/prefixes.json', 'w') as f:
             json.dump(prefixes, f , indent=4)
 
-    @commands.command(aliases=['prefix'], help= 'Change prefix', description = 'Change bot''s current prefix to a new one')
+    @commands.command(aliases=['prefix'], help= 'Change prefix.', description = 'Change bot\'s current prefix to a new one.')
     async def change_prefix(self, ctx, new_prefix):
         key = str(ctx.author.id)
         with open('./cogs/prefixes.json', 'r') as f:
@@ -38,6 +38,11 @@ class Prefix(commands.Cog):
             json.dump(prefixes, f , indent=4)    
         
         await ctx.send(f'Bot prefix changes from {old_prefix} to {new_prefix}')
+
+    @change_prefix.error
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.errors.MissingRequiredArgument):
+            await ctx.send(f'You are missing required arguments for this command!\nTo find out the right way to use this command, type: `{ctx.prefix}help` prefix')
 
 def setup(bot):
     

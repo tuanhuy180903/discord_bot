@@ -1,6 +1,7 @@
 import discord
 import json
-from discord.ext import commands, tasks
+from discord.ext import commands
+import asyncio
 
 def is_roled(ctx):
     return len(ctx.author.roles)>1
@@ -123,6 +124,7 @@ class Event(commands.Cog):
         self.accept = {}
         self.opponent = {}
         self.status = {}
+        self.task_list = []
     
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
@@ -268,6 +270,15 @@ class Event(commands.Cog):
                 embed = message.embeds
                 await uzer.dm_channel.send(f'> **{embed[0].description}**\nUnfortunately, you chose {reaction.emoji} - the **wrong** answer for the question!')
 
+    async def accept_clear(self, mess_id:str, play_id:int):
+        await self.bot.wait_until_ready()
+        index = len(self.task_list)-1
+        while not self.bot.is_closed():
+            await asyncio.sleep(30)
+            del self.accept[mess_id]
+            del self.opponent[play_id]
+            self.task_list[index].cancel()
+
     @commands.command(aliases=['ttt'],help='Play tic-tac-toe with someone.',usage = '<username_to_play>')
     @commands.check(is_roled)
     async def tictactoe(self, ctx, player:discord.Member):
@@ -277,13 +288,17 @@ class Event(commands.Cog):
             return await ctx.send('Can\'t use on yourself!')
         if player == self.bot.user:
             return await ctx.send('Can\'t use on bot!')
+        if not player.nick:
+            name1 = player.name
+        else:
+            name1 = player.nick  
         for i in self.opponent:
             if self.opponent[i] == ctx.author.id:
                 return await ctx.send('You are playing in another board!')
             if self.opponent[i] == player.id:
-                return await ctx.send(f'{player.name} is playing in another board!')
+                return await ctx.send(f'**{name1}** is playing in another board!')
         if player.id in self.opponent:
-            return await ctx.send(f'{player.name} is playing in another board!')
+            return await ctx.send(f'**{name1}** is playing in another board!')
         if ctx.author.id in self.opponent:
             return await ctx.send('You are playing in another board!')
         if not ctx.author.nick:
@@ -292,7 +307,7 @@ class Event(commands.Cog):
             name2 = ctx.author.nick  
         embed = discord.Embed(
             title = 'Tic-Tac-Toe',
-            description = f'{player.mention}, **{name2}** is challenging you for tic-tac-toe.\nPlease add reaction "accept" or "reject" below this message!',
+            description = f'{player.mention}, **{name2}** is challenging you for tic-tac-toe.\nPlease add reaction **accept** :white_check_mark: or **reject** :x: below this message!\n__Note__: This invitaion will expire in 30 seconds.',
             colour = discord.Colour.blue()
         )
         embed.set_footer(text='Copyright © 2020 EEIT2017')
@@ -301,6 +316,8 @@ class Event(commands.Cog):
         await message.add_reaction('\U00002705')
         await message.add_reaction('\U0000274C')
         self.accept[str(message.id)] = player.id
+        self.bg_task = self.bot.loop.create_task(self.accept_clear(str(message.id),player.id))
+        self.task_list.append(self.bg_task)
         self.opponent[player.id] = ctx.author.id
 
     @commands.Cog.listener()
