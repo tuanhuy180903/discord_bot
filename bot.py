@@ -122,11 +122,6 @@ async def on_command_error(ctx, error):
         return await ctx.send('Sorry, you found a developer-only command!')
 
 bot.run(TOKEN)
-'''@bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send('You are missing permissions for this command')'''
-
 
 '''@bot.command()
 async def help(ctx):
