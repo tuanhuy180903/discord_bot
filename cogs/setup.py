@@ -140,7 +140,7 @@ class Setup(commands.Cog):
             channel = discord.utils.get(guild.text_channels, name='rules')
             embed = discord.Embed(
                 title = f'Hello, I\'m {self.bot.user.name}!',
-                description = f'You must sign up for a student of **{ctx.author.name}**\'s server.',
+                description = f'You must sign up for a student of Teacher **{ctx.author.name}**\'s server.',
                 colour = discord.Colour.green()
             )
             #embed.set_author(name=ctx.author.name)
