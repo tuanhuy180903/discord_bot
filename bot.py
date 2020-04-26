@@ -41,9 +41,13 @@ bot = commands.Bot(command_prefix=get_prefix)
 
 @bot.event
 async def on_ready():
-    await bot.change_presence(status=discord.Status.idle, activity=discord.Activity(name="this server | Stay Home - Stay Safe", type=discord.ActivityType.watching))
-    channel = discord.utils.get(bot.get_all_channels(), name = 'chat')
-    await channel.send('Hey I\'m online!')
+    await bot.change_presence(
+        status=discord.Status.idle, 
+        activity=discord.Activity(name="this server | Stay Home - Stay Safe", type=discord.ActivityType.watching)
+    )
+    for channel in bot.get_all_channels():
+        if channel.name == 'chat':
+            await channel.send('Hey I\'m online!')
 
 @bot.command(description='Only for the developer!')
 @commands.is_owner()
