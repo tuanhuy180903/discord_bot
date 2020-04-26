@@ -308,10 +308,7 @@ class Tools(commands.Cog):
         if isinstance(error, commands.errors.MissingRequiredArgument):
             await ctx.send(f'You are missing required arguments for this command!\nTo find out the right way to use this command, type: `{ctx.prefix}help` ban')
 
-    @commands.command(
-        brief='Unban member.',  
-        description='To unban a member. First, you have to know the member\'s name and discriminator. Then use this command, for example:\n;unban Pidv#0671', 
-        usage='<user_name>#<user_discriminator>')
+    @commands.command(brief='Unban member.', description='To unban a member. First, you have to know the member\'s name and discriminator. Then use this command, for example:\n;unban Pidv#0671', usage='<user_name>#<user_discriminator>')
     @commands.has_permissions(administrator=True)
     async def unban(self, ctx, *, member):
         banned_users = await ctx.guild.bans()
